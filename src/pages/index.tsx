@@ -1,4 +1,5 @@
 import { type RouterOutputs, api } from "@/utils/api";
+import Spinner from "@/components/Spinner";
 
 import Head from "next/head";
 import Link from "next/link";
@@ -57,12 +58,26 @@ function PostView(props: PostWithUser) {
   );
 }
 
-export default function Home() {
-  const user = useUser();
+function Feed() {
+  const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
 
-  const { data, isLoading } = api.posts.getAll.useQuery();
-  if (isLoading) return <div>Loading...</div>;
+  if (postsLoading) return <LoadingPage />;
   if (!data) return <div>Something went wrong</div>;
+
+  return (
+    <section>
+      {[...data, ...data].map((props) => (
+        <PostView {...props} key={props.post.id} />
+      ))}
+    </section>
+  );
+}
+
+export default function Home() {
+  api.posts.getAll.useQuery();
+
+  const { isLoaded: userLoaded, isSignedIn } = useUser();
+  if (!userLoaded) return <div />;
 
   return (
     <>
@@ -75,7 +90,7 @@ export default function Home() {
       <main className="flex min-h-screen justify-center">
         <div className="w-full border-x border-slate-400 md:max-w-2xl">
           <section className="flex border-b border-slate-400 p-4">
-            {!user.isSignedIn ? (
+            {!isSignedIn ? (
               <>
                 <Link href="sign-in">Sign In</Link>
                 <Link href="sign-up">Sign Up</Link>
@@ -87,14 +102,17 @@ export default function Home() {
               </>
             )}
           </section>
-
-          <section>
-            {[...data, ...data].map((props) => (
-              <PostView {...props} key={props.post.id} />
-            ))}
-          </section>
+          <Feed />
         </div>
       </main>
     </>
+  );
+}
+
+export function LoadingPage() {
+  return (
+    <div className="flex h-24 w-full items-center justify-center">
+      <Spinner />
+    </div>
   );
 }
