@@ -9,11 +9,28 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import dayjs from "dayjs";
 import relatveTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
+import { FormEvent, useState } from "react";
 dayjs.extend(relatveTime);
 
 function CreatePostWizard() {
   const { user } = useUser();
   if (!user) return null;
+
+  const [newPost, setNewPost] = useState("");
+
+  const ctx = api.useContext();
+
+  const { mutate, isLoading: isPosting } = api.posts.create.useMutation({
+    onSuccess: () => {
+      setNewPost("");
+      void ctx.posts.getAll.invalidate();
+    },
+  });
+
+  function onSubmitNewPost(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    mutate({ content: newPost });
+  }
 
   return (
     <div className="flex w-full gap-4">
@@ -23,10 +40,16 @@ function CreatePostWizard() {
         className="h-12 w-12 rounded-full"
       />
 
-      <input
-        placeholder="type some emojis"
-        className="grow bg-transparent outline-none"
-      />
+      <form onSubmit={onSubmitNewPost}>
+        <input
+          type="text"
+          placeholder="type some emojis"
+          value={newPost}
+          onChange={(e) => setNewPost(e.target.value)}
+          disabled={isPosting}
+          className="grow bg-transparent outline-none"
+        />
+      </form>
     </div>
   );
 }
@@ -66,7 +89,7 @@ function Feed() {
 
   return (
     <section>
-      {[...data, ...data].map((props) => (
+      {data.map((props) => (
         <PostView {...props} key={props.post.id} />
       ))}
     </section>

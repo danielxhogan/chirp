@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import {
+  createTRPCRouter,
+  privateProcedure,
+  publicProcedure,
+} from "@/server/api/trpc";
 import { clerkClient } from "@clerk/nextjs";
 import type { User } from "@clerk/nextjs/dist/types/server";
 import { TRPCError } from "@trpc/server";
@@ -19,6 +23,7 @@ export const postsRouter = createTRPCRouter({
 
     const posts = await ctx.db.post.findMany({
       take: LIMIT,
+      orderBy: [{ createdAt: "desc" }],
     });
 
     const userId = posts.map((post) => post.userId);
@@ -45,4 +50,23 @@ export const postsRouter = createTRPCRouter({
       };
     });
   }),
+  create: privateProcedure
+    .input(
+      z.object({
+        content: z.string().emoji().min(1).max(255),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
+
+      const post = await ctx.db.post.create({
+        data: {
+          userId,
+          content: input.content,
+          name: "name",
+        },
+      });
+
+      return post;
+    }),
 });
